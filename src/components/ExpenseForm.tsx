@@ -3,11 +3,12 @@
 import { useState, useTransition, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { createExpense, updateExpense } from '@/app/actions/expenses'
-import type { Expense } from '@/lib/types'
+import type { Expense, ExtractedExpense } from '@/lib/types'
 import { EXPENSE_CATEGORIES } from '@/lib/types'
 
 interface Props {
   expense?: Expense
+  prefill?: ExtractedExpense | null
   onClose: () => void
 }
 
@@ -15,12 +16,16 @@ function fmt(n: number) {
   return new Intl.NumberFormat('en-CA', { style: 'currency', currency: 'CAD' }).format(n)
 }
 
-export function ExpenseForm({ expense, onClose }: Props) {
+export function ExpenseForm({ expense, prefill, onClose }: Props) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState('')
-  const [amount, setAmount] = useState<number>(expense?.amount ?? 0)
-  const [taxAmount, setTaxAmount] = useState<number>(expense?.tax_amount ?? 0)
+  const [amount, setAmount] = useState<number>(
+    expense?.amount ?? prefill?.amount ?? 0
+  )
+  const [taxAmount, setTaxAmount] = useState<number>(
+    expense?.tax_amount ?? prefill?.tax_amount ?? 0
+  )
 
   const total = useMemo(() => Math.round((amount + taxAmount) * 100) / 100, [amount, taxAmount])
 
@@ -45,13 +50,14 @@ export function ExpenseForm({ expense, onClose }: Props) {
   }
 
   const isEditing = !!expense
+  const titleText = isEditing ? 'Editing' : prefill ? 'Reviewing' : 'Composing'
 
   return (
     <form onSubmit={handleSubmit}>
       <section className="pt-10 pb-6 rule-bottom flex flex-wrap items-baseline justify-between gap-y-3">
         <div>
           <p className="font-meta text-[10px] tracking-[0.25em] text-gold mb-2">
-            {isEditing ? 'Editing' : 'Composing'} · Manual Entry
+            {titleText} · {prefill && !isEditing ? 'Auto-Filled From Receipt' : 'Manual Entry'}
           </p>
           <h2 className="font-display text-[44px] md:text-[64px] leading-[0.92] tracking-tight">
             {isEditing ? 'Expense Entry' : 'New Expense'}
@@ -81,13 +87,18 @@ export function ExpenseForm({ expense, onClose }: Props) {
             <Field label="Vendor">
               <input
                 name="vendor"
-                defaultValue={expense?.vendor || ''}
+                defaultValue={expense?.vendor || prefill?.vendor || ''}
                 className="input-ruled"
-                placeholder="Whose invoice is this?"
+                placeholder="Whose receipt is this?"
               />
             </Field>
             <Field label="Category">
-              <select name="category" defaultValue={expense?.category || 'other'} required className="input-ruled">
+              <select
+                name="category"
+                defaultValue={expense?.category || prefill?.category || 'other'}
+                required
+                className="input-ruled"
+              >
                 {EXPENSE_CATEGORIES.map((c) => (
                   <option key={c.value} value={c.value}>{c.label}</option>
                 ))}
@@ -98,7 +109,7 @@ export function ExpenseForm({ expense, onClose }: Props) {
           <Field label="Description" full>
             <input
               name="description"
-              defaultValue={expense?.description || ''}
+              defaultValue={expense?.description || prefill?.description || ''}
               required
               className="input-ruled font-body text-[16px]"
               placeholder="What was bought?"
@@ -131,7 +142,7 @@ export function ExpenseForm({ expense, onClose }: Props) {
               <input
                 name="expense_date"
                 type="date"
-                defaultValue={expense?.expense_date || new Date().toISOString().split('T')[0]}
+                defaultValue={expense?.expense_date || prefill?.expense_date || new Date().toISOString().split('T')[0]}
                 required
                 className="input-ruled tabular-nums"
               />
@@ -152,7 +163,7 @@ export function ExpenseForm({ expense, onClose }: Props) {
             <textarea
               name="notes"
               rows={3}
-              defaultValue={expense?.notes || ''}
+              defaultValue={expense?.notes || prefill?.notes || ''}
               className="input-ruled resize-none"
               placeholder="optional — any context for the audit trail"
             />
@@ -185,10 +196,17 @@ export function ExpenseForm({ expense, onClose }: Props) {
               </div>
             </dl>
 
-            <p className="mt-8 pt-6 rule-top font-body text-[12px] italic text-ink/55 leading-relaxed">
-              All entries become part of the running ledger. Strike or edit as needed —
-              every change is timestamped.
-            </p>
+            {prefill ? (
+              <p className="mt-8 pt-6 rule-top font-body italic text-ink/55 leading-relaxed">
+                Auto-filled from the dropped receipt. Review every field before filing — Claude
+                is accurate, not infallible.
+              </p>
+            ) : (
+              <p className="mt-8 pt-6 rule-top font-body italic text-ink/55 leading-relaxed">
+                All entries become part of the running ledger. Strike or edit as needed —
+                every change is timestamped.
+              </p>
+            )}
           </div>
         </aside>
       </div>

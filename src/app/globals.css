@@ -79,7 +79,7 @@ body {
   background-color: var(--color-paper);
   color: var(--color-ink);
   font-family: var(--font-body);
-  font-size: 15px;
+  font-size: 21px;
   line-height: 1.45;
   letter-spacing: var(--tracking-rebrief);
   -webkit-font-smoothing: antialiased;

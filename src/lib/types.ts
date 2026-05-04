@@ -94,6 +94,17 @@ export interface ExtractedInvoice {
   notes: string | null
 }
 
+export interface ExtractedExpense {
+  vendor: string | null
+  description: string | null
+  category: ExpenseCategory | null
+  amount: number | null
+  tax_amount: number | null
+  total: number | null
+  expense_date: string | null
+  notes: string | null
+}
+
 export const EXPENSE_CATEGORIES: { value: ExpenseCategory; label: string }[] = [
   { value: 'printing', label: 'Printing' },
   { value: 'design', label: 'Design' },

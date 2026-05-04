@@ -2,10 +2,11 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import type { Expense, ExpenseCategory } from '@/lib/types'
+import type { Expense, ExpenseCategory, ExtractedExpense } from '@/lib/types'
 import { EXPENSE_CATEGORIES } from '@/lib/types'
 import { deleteExpense } from '@/app/actions/expenses'
 import { ExpenseForm } from './ExpenseForm'
+import { ExpenseUpload } from './ExpenseUpload'
 
 const CATEGORY_LABELS: Record<ExpenseCategory, string> = Object.fromEntries(
   EXPENSE_CATEGORIES.map((c) => [c.value, c.label])
@@ -28,6 +29,7 @@ export function ExpenseWorkbench({ expenses }: { expenses: Expense[] }) {
   const [isPending, startTransition] = useTransition()
   const [composing, setComposing] = useState(false)
   const [editing, setEditing] = useState<Expense | null>(null)
+  const [prefill, setPrefill] = useState<ExtractedExpense | null>(null)
   const [catFilter, setCatFilter] = useState<string>('all')
 
   const categories = Array.from(new Set(expenses.map((e) => e.category))).sort()
@@ -41,46 +43,67 @@ export function ExpenseWorkbench({ expenses }: { expenses: Expense[] }) {
     })
   }
 
+  function handleExtracted(data: ExtractedExpense) {
+    setPrefill(data)
+    setComposing(true)
+  }
+
   function closeForm() {
     setComposing(false)
     setEditing(null)
+    setPrefill(null)
     router.refresh()
   }
 
   if (composing || editing) {
-    return <ExpenseForm expense={editing ?? undefined} onClose={closeForm} />
+    return <ExpenseForm expense={editing ?? undefined} prefill={prefill} onClose={closeForm} />
   }
 
   return (
     <>
-      {/* Composition strip */}
-      <section className="pt-10 pb-6 flex flex-wrap items-baseline justify-between gap-4">
-        <button
-          onClick={() => setComposing(true)}
-          className="font-display text-[14px] tracking-[0.18em] uppercase text-ink hover:text-gold transition-colors flex items-baseline gap-2"
-        >
-          <span className="text-gold text-[18px] leading-none">＋</span>
-          Record an Expense
-        </button>
-
-        <div className="flex items-baseline gap-3">
-          <label className="font-meta text-[10px] tracking-[0.22em] text-ink/45">Category</label>
-          <select
-            value={catFilter}
-            onChange={(e) => setCatFilter(e.target.value)}
-            className="bg-transparent border-0 border-b border-rule outline-none focus:border-gold font-body text-[13px] tracking-[0.05em] py-1 pr-4"
+      {/* Composition strip — drop receipt + record button */}
+      <section className="pt-10 pb-8 grid grid-cols-12 gap-6 items-stretch">
+        <div className="col-span-12 md:col-span-8">
+          <ExpenseUpload onExtracted={handleExtracted} />
+        </div>
+        <div className="col-span-12 md:col-span-4 flex items-center md:justify-end gap-6">
+          <button
+            onClick={() => setComposing(true)}
+            className="font-display text-[12px] tracking-[0.18em] uppercase text-ink hover:text-gold transition-colors flex items-baseline gap-2"
           >
-            <option value="all">All categories</option>
-            {categories.map((c) => (
-              <option key={c} value={c}>{CATEGORY_LABELS[c] || c}</option>
-            ))}
-          </select>
+            <span className="text-gold text-[16px] leading-none">＋</span>
+            Record by Hand
+          </button>
         </div>
       </section>
 
+      {/* Filter strip */}
+      <div className="rule-top rule-bottom py-3 flex flex-wrap items-baseline gap-x-6 gap-y-2">
+        <span className="font-meta text-[10px] tracking-[0.25em] text-ink/45">Category</span>
+        <button
+          onClick={() => setCatFilter('all')}
+          className={`font-meta text-[10px] tracking-[0.22em] uppercase transition-colors ${
+            catFilter === 'all' ? 'text-ink border-b border-gold pb-0.5' : 'text-ink/40 hover:text-ink'
+          }`}
+        >
+          All
+        </button>
+        {categories.map((c) => (
+          <button
+            key={c}
+            onClick={() => setCatFilter(c)}
+            className={`font-meta text-[10px] tracking-[0.22em] uppercase transition-colors ${
+              catFilter === c ? 'text-ink border-b border-gold pb-0.5' : 'text-ink/40 hover:text-ink'
+            }`}
+          >
+            {CATEGORY_LABELS[c] || c}
+          </button>
+        ))}
+      </div>
+
       {/* Broadsheet table */}
-      <section className="pb-12">
-        <div className="hidden md:grid grid-cols-[100px_1fr_140px_140px_120px_120px] gap-4 py-3 rule-top rule-bottom">
+      <section className="pt-2 pb-12">
+        <div className="hidden md:grid grid-cols-[100px_1fr_140px_140px_120px_120px] gap-4 py-3 rule-bottom">
           <span className="font-meta text-[9px] tracking-[0.22em] text-ink/45">Date</span>
           <span className="font-meta text-[9px] tracking-[0.22em] text-ink/45">Description</span>
           <span className="font-meta text-[9px] tracking-[0.22em] text-ink/45">Vendor</span>
@@ -90,9 +113,9 @@ export function ExpenseWorkbench({ expenses }: { expenses: Expense[] }) {
         </div>
 
         {filtered.length === 0 ? (
-          <p className="py-16 text-center font-body text-[16px] italic text-ink/40">
+          <p className="py-16 text-center font-body italic text-ink/40">
             {catFilter === 'all'
-              ? 'No expenses recorded. The press, the photographers, the print run — file each one as it comes.'
+              ? 'No expenses recorded. Drop a receipt above or record one by hand.'
               : `No expenses recorded in ${CATEGORY_LABELS[catFilter as ExpenseCategory] || catFilter}.`}
           </p>
         ) : (
@@ -105,14 +128,14 @@ export function ExpenseWorkbench({ expenses }: { expenses: Expense[] }) {
                 {formatDateBroad(exp.expense_date)}
               </time>
               <div className="col-span-2 md:col-span-1 row-start-2 md:row-start-auto">
-                <p className="font-body text-[15px] text-ink leading-snug">{exp.description}</p>
+                <p className="font-body text-ink leading-snug">{exp.description}</p>
                 {exp.notes && (
-                  <p className="font-body text-[12px] text-ink/45 italic mt-0.5">
+                  <p className="font-body italic text-ink/45 mt-0.5" style={{ fontSize: '0.85em' }}>
                     {exp.notes}
                   </p>
                 )}
               </div>
-              <span className="font-body text-[13px] text-ink/65">{exp.vendor || '—'}</span>
+              <span className="font-body text-ink/65" style={{ fontSize: '0.9em' }}>{exp.vendor || '—'}</span>
               <span className="font-meta text-[10px] tracking-[0.22em] text-ink/55">
                 {CATEGORY_LABELS[exp.category] || exp.category}
               </span>
