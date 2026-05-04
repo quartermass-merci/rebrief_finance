@@ -97,6 +97,51 @@ export async function updateInvoiceStatus(id: string, status: string) {
   revalidatePath('/ledger')
 }
 
+/**
+ * Record a payment against an invoice. Marks the invoice paid, stamps the
+ * actual paid_date, and appends a reference to notes if provided.
+ *
+ * @param id          UUID of the invoice
+ * @param paidDate    YYYY-MM-DD when the payment actually arrived
+ * @param reference   Optional payment reference (e.g. "EFT-12345", "Cheque #1234")
+ */
+export async function recordInvoicePayment(
+  id: string,
+  paidDate: string,
+  reference?: string
+) {
+  // Fetch existing notes so we can append rather than overwrite
+  const { data: existing, error: fetchError } = await supabase
+    .from('invoices')
+    .select('notes')
+    .eq('id', id)
+    .single()
+
+  if (fetchError) throw new Error(fetchError.message)
+
+  let notes: string | null = existing?.notes || null
+  if (reference && reference.trim()) {
+    const stamp = `Paid ${paidDate} · Ref ${reference.trim()}`
+    notes = notes ? `${notes}\n${stamp}` : stamp
+  }
+
+  const { error } = await supabase
+    .from('invoices')
+    .update({
+      status: 'paid',
+      paid_date: paidDate,
+      notes,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', id)
+
+  if (error) throw new Error(error.message)
+
+  revalidatePath('/invoices')
+  revalidatePath('/')
+  revalidatePath('/ledger')
+}
+
 export async function deleteInvoice(id: string) {
   const { error } = await supabase.from('invoices').delete().eq('id', id)
   if (error) throw new Error(error.message)
