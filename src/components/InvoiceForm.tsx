@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { createInvoice, updateInvoice } from '@/app/actions/invoices'
-import type { Invoice, LineItem } from '@/lib/types'
+import type { Invoice, LineItem, ExtractedInvoice } from '@/lib/types'
 
 const inputClass =
   'w-full px-3 py-2 border border-rebrief-cream rounded-sm text-sm bg-rebrief-light/50 focus:outline-none focus:border-rebrief-gold focus:ring-1 focus:ring-rebrief-gold'
@@ -12,19 +12,22 @@ const labelClass = 'block text-[10px] font-medium text-rebrief-dark/50 mb-1 uppe
 interface Props {
   invoice?: Invoice
   nextNumber?: string
+  prefill?: ExtractedInvoice | null
   onClose: () => void
 }
 
-export function InvoiceForm({ invoice, nextNumber, onClose }: Props) {
+export function InvoiceForm({ invoice, nextNumber, prefill, onClose }: Props) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState('')
 
-  const [lineItems, setLineItems] = useState<LineItem[]>(
-    invoice?.line_items?.length
-      ? invoice.line_items
+  const initialLineItems: LineItem[] = invoice?.line_items?.length
+    ? invoice.line_items
+    : prefill?.line_items?.length
+      ? prefill.line_items
       : [{ description: '', quantity: 1, rate: 0, amount: 0 }]
-  )
+
+  const [lineItems, setLineItems] = useState<LineItem[]>(initialLineItems)
 
   function updateLineItem(index: number, field: keyof LineItem, value: string) {
     setLineItems((prev) => {
@@ -84,9 +87,16 @@ export function InvoiceForm({ invoice, nextNumber, onClose }: Props) {
     <div className="fixed inset-0 z-50 flex items-start justify-center pt-16 px-4 bg-rebrief-dark/40">
       <div className="bg-white border border-rebrief-cream rounded-sm w-full max-w-2xl max-h-[80vh] overflow-y-auto shadow-lg">
         <div className="px-6 py-4 border-b border-rebrief-cream flex items-center justify-between sticky top-0 bg-white z-10">
-          <h2 className="font-display text-lg tracking-wide uppercase">
-            {invoice ? 'Edit Invoice' : 'New Invoice'}
-          </h2>
+          <div>
+            <h2 className="font-display text-lg tracking-wide uppercase">
+              {invoice ? 'Edit Invoice' : prefill ? 'Review Extracted Invoice' : 'New Invoice'}
+            </h2>
+            {prefill && (
+              <p className="font-meta text-[9px] tracking-[0.15em] uppercase text-rebrief-gold mt-0.5">
+                Auto-filled from PDF · review before saving
+              </p>
+            )}
+          </div>
           <button onClick={onClose} className="text-rebrief-dark/30 hover:text-rebrief-dark text-xl leading-none">&times;</button>
         </div>
 
@@ -94,7 +104,7 @@ export function InvoiceForm({ invoice, nextNumber, onClose }: Props) {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className={labelClass}>Invoice Number</label>
-              <input name="invoice_number" defaultValue={invoice?.invoice_number || nextNumber} required className={inputClass} />
+              <input name="invoice_number" defaultValue={invoice?.invoice_number || prefill?.invoice_number || nextNumber} required className={inputClass} />
             </div>
             <div>
               <label className={labelClass}>Status</label>
@@ -115,36 +125,36 @@ export function InvoiceForm({ invoice, nextNumber, onClose }: Props) {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className={labelClass}>Client Name</label>
-              <input name="client_name" defaultValue={invoice?.client_name || ''} required className={inputClass} />
+              <input name="client_name" defaultValue={invoice?.client_name || prefill?.client_name || ''} required className={inputClass} />
             </div>
             <div>
               <label className={labelClass}>Client Email</label>
-              <input name="client_email" type="email" defaultValue={invoice?.client_email || ''} className={inputClass} />
+              <input name="client_email" type="email" defaultValue={invoice?.client_email || prefill?.client_email || ''} className={inputClass} />
             </div>
           </div>
 
           <div>
             <label className={labelClass}>Client Address</label>
-            <input name="client_address" defaultValue={invoice?.client_address || ''} className={inputClass} />
+            <input name="client_address" defaultValue={invoice?.client_address || prefill?.client_address || ''} className={inputClass} />
           </div>
 
           <div>
             <label className={labelClass}>Description</label>
-            <input name="description" defaultValue={invoice?.description || ''} className={inputClass} />
+            <input name="description" defaultValue={invoice?.description || prefill?.description || ''} className={inputClass} />
           </div>
 
           <div className="grid grid-cols-3 gap-4">
             <div>
               <label className={labelClass}>Issue Date</label>
-              <input name="issued_date" type="date" defaultValue={invoice?.issued_date || new Date().toISOString().split('T')[0]} className={inputClass} />
+              <input name="issued_date" type="date" defaultValue={invoice?.issued_date || prefill?.issued_date || new Date().toISOString().split('T')[0]} className={inputClass} />
             </div>
             <div>
               <label className={labelClass}>Due Date</label>
-              <input name="due_date" type="date" defaultValue={invoice?.due_date || ''} className={inputClass} />
+              <input name="due_date" type="date" defaultValue={invoice?.due_date || prefill?.due_date || ''} className={inputClass} />
             </div>
             <div>
               <label className={labelClass}>HST Rate (%)</label>
-              <input name="tax_rate" type="number" step="0.01" defaultValue={invoice?.tax_rate ?? 13} className={inputClass} />
+              <input name="tax_rate" type="number" step="0.01" defaultValue={invoice?.tax_rate ?? prefill?.tax_rate ?? 13} className={inputClass} />
             </div>
           </div>
 
@@ -212,7 +222,7 @@ export function InvoiceForm({ invoice, nextNumber, onClose }: Props) {
 
           <div>
             <label className={labelClass}>Notes / Payment Terms</label>
-            <textarea name="notes" rows={2} defaultValue={invoice?.notes || ''} className={inputClass} />
+            <textarea name="notes" rows={2} defaultValue={invoice?.notes || prefill?.notes || ''} className={inputClass} />
           </div>
 
           {error && <p className="text-sm text-rebrief-red">{error}</p>}

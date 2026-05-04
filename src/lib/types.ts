@@ -78,6 +78,22 @@ export interface DashboardStats {
   overdueAmount: number
 }
 
+export interface ExtractedInvoice {
+  invoice_number: string | null
+  client_name: string | null
+  client_email: string | null
+  client_address: string | null
+  description: string | null
+  line_items: LineItem[]
+  subtotal: number | null
+  tax_rate: number | null
+  tax_amount: number | null
+  total: number | null
+  issued_date: string | null
+  due_date: string | null
+  notes: string | null
+}
+
 export const EXPENSE_CATEGORIES: { value: ExpenseCategory; label: string }[] = [
   { value: 'printing', label: 'Printing' },
   { value: 'design', label: 'Design' },
