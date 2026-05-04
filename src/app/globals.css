@@ -283,13 +283,45 @@ select.input-ruled {
   border-bottom-color: var(--color-ink);
 }
 
-/* Reduced motion: skip transitions */
+/* ============================================================
+   ENTRANCE STAGGER — used on the login cover.
+   Each .entry fades in and rises 8px on a staggered delay,
+   like a broadsheet composing itself before press.
+   ============================================================ */
+
+@keyframes editorial-entry {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.entry {
+  animation: editorial-entry 600ms cubic-bezier(0.2, 0.8, 0.3, 1) both;
+}
+.entry-1 { animation-delay: 0ms; }
+.entry-2 { animation-delay: 80ms; }
+.entry-3 { animation-delay: 200ms; }
+.entry-4 { animation-delay: 320ms; }
+.entry-5 { animation-delay: 460ms; }
+.entry-6 { animation-delay: 600ms; }
+.entry-7 { animation-delay: 740ms; }
+
+/* Reduced motion: skip transitions and entrance animations */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
   *::after {
     transition-duration: 0ms !important;
     animation-duration: 0ms !important;
+  }
+  .entry {
+    opacity: 1 !important;
+    transform: none !important;
   }
 }
 
