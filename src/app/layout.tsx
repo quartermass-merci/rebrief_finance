@@ -3,7 +3,7 @@ import './globals.css'
 
 export const metadata: Metadata = {
   title: 'Rebrief — Treasury',
-  description: 'The financial ledger of Rebrief Magazine. Imprinted Tkaronto.',
+  description: 'The financial ledger of Rebrief Magazine.',
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

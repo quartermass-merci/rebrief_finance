@@ -57,16 +57,6 @@ function fmt(n: number) {
   return new Intl.NumberFormat('en-CA', { style: 'currency', currency: 'CAD' }).format(abs)
 }
 
-const ROMAN_YEARS: Record<number, string> = {
-  2024: 'MMXXIV',
-  2025: 'MMXXV',
-  2026: 'MMXXVI',
-  2027: 'MMXXVII',
-  2028: 'MMXXVIII',
-  2029: 'MMXXIX',
-  2030: 'MMXXX',
-}
-
 export default async function LedgerPage() {
   const entries = await getLedger()
 
@@ -74,13 +64,10 @@ export default async function LedgerPage() {
   const totalOut = entries.filter((e) => e.type === 'expense').reduce((s, e) => s + Math.abs(e.amount), 0)
   const net = totalIn - totalOut
 
-  const currentYear = new Date().getFullYear()
-  const yearRoman = ROMAN_YEARS[currentYear] || `${currentYear}`
-
   return (
     <>
       <SectionHead
-        eyebrow={`${yearRoman} · Running Account`}
+        eyebrow="Running Account"
         title="Ledger"
         marginalia={
           <p className="font-body text-[13px] italic text-ink/55 leading-relaxed">

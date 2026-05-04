@@ -79,12 +79,11 @@ export default async function OverviewPage() {
   return (
     <>
       <SectionHead
-        eyebrow="MMXXVI · The Treasury"
+        eyebrow="The Treasury"
         title="Overview"
         marginalia={
           <p className="font-meta text-[10px] tracking-[0.22em] text-ink/40 leading-relaxed">
             A standing summary of paid invoices, recorded expenses, and the running balance.
-            Imprinted from Supabase.
           </p>
         }
       />

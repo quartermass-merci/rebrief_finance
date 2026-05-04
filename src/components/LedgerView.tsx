@@ -30,16 +30,6 @@ function getYear(iso: string): number {
   return parseInt(iso.split('-')[0], 10)
 }
 
-const ROMAN_YEARS: Record<number, string> = {
-  2024: 'MMXXIV',
-  2025: 'MMXXV',
-  2026: 'MMXXVI',
-  2027: 'MMXXVII',
-  2028: 'MMXXVIII',
-  2029: 'MMXXIX',
-  2030: 'MMXXX',
-}
-
 export function LedgerView({ entries }: { entries: LedgerEntry[] }) {
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
@@ -145,10 +135,10 @@ export function LedgerView({ entries }: { entries: LedgerEntry[] }) {
         ) : (
           grouped.map((group) => (
             <div key={group.year} className="mb-12 last:mb-0">
-              {/* Year header — Latin numerals */}
+              {/* Year header */}
               <header className="py-4 rule-top rule-bottom flex items-baseline justify-between mb-2">
                 <h2 className="font-display text-[28px] md:text-[36px] tracking-tight">
-                  {ROMAN_YEARS[group.year] || group.year}
+                  {group.year}
                 </h2>
                 <p className="font-meta text-[10px] tracking-[0.25em] text-ink/45">
                   {group.entries.length} entr{group.entries.length === 1 ? 'y' : 'ies'}

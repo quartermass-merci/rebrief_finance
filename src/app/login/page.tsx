@@ -19,24 +19,13 @@ const EPIGRAPHS = [
   'Books are never closed; they’re only being read.',
 ]
 
-const ROMAN_YEARS: Record<number, string> = {
-  2024: 'MMXXIV',
-  2025: 'MMXXV',
-  2026: 'MMXXVI',
-  2027: 'MMXXVII',
-  2028: 'MMXXVIII',
-  2029: 'MMXXIX',
-  2030: 'MMXXX',
-}
-
 function todayWire() {
   const d = new Date()
   const day = d.toLocaleDateString('en-CA', { weekday: 'long' }).toUpperCase()
   const month = d.toLocaleDateString('en-CA', { month: 'long' }).toUpperCase()
   const date = d.getDate()
   const year = d.getFullYear()
-  const roman = ROMAN_YEARS[year] || String(year)
-  return { day, month, date, roman }
+  return { day, month, date, year }
 }
 
 export default function LoginPage() {
@@ -74,18 +63,12 @@ export default function LoginPage() {
         </p>
       </header>
 
-      {/* CP wire ticker — today's date and location, like a real broadsheet */}
+      {/* Date strip — today's date in masthead style */}
       <div className="rule-bottom-faint px-6 md:px-10 py-2 entry entry-2">
         <p className="font-meta text-[10px] md:text-[11px] tracking-[0.25em] text-ink/50 flex flex-wrap items-center gap-x-3 gap-y-1">
           <span>{today.day}</span>
           <span className="text-gold">·</span>
-          <span>{today.date} {today.month} {today.roman}</span>
-          <span className="text-gold">·</span>
-          <span>Tkaronto</span>
-          <span className="text-gold">·</span>
-          <span>43°38′N 79°25′W</span>
-          <span className="text-gold">·</span>
-          <span className="text-gold">CP-WIRE</span>
+          <span>{today.date} {today.month} {today.year}</span>
         </p>
       </div>
 
@@ -94,7 +77,7 @@ export default function LoginPage() {
         <div className="w-full max-w-2xl">
           <div className="text-center mb-16">
             <p className="font-meta text-[10px] md:text-[11px] tracking-[0.3em] text-gold mb-6 entry entry-3">
-              {today.roman} <span className="text-ink/40 mx-1">·</span> A Closed Ledger
+              A Closed Ledger
             </p>
             <h1
               className="font-display tracking-tight leading-[0.92] mb-7 entry entry-4"
@@ -151,18 +134,13 @@ export default function LoginPage() {
 
       {/* Colophon */}
       <footer className="rule-top px-6 md:px-10 py-5 entry entry-7">
-        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
-          <p className="font-meta text-[10px] tracking-[0.25em] text-ink/40 flex flex-wrap items-center gap-x-3 gap-y-1">
-            <span>Rebrief Magazine</span>
-            <span className="text-gold">·</span>
-            <span>Imprinted Tkaronto</span>
-            <span className="text-gold">·</span>
-            <span>Registered Non-Profit · Ontario</span>
-          </p>
-          <p className="font-meta text-[10px] tracking-[0.25em] text-ink/30">
-            Vol. I <span className="text-gold mx-1">·</span> Iss. 01
-          </p>
-        </div>
+        <p className="font-meta text-[10px] tracking-[0.25em] text-ink/40 flex flex-wrap items-center gap-x-3 gap-y-1">
+          <span>Rebrief Magazine</span>
+          <span className="text-gold">·</span>
+          <span>Treasury</span>
+          <span className="text-gold">·</span>
+          <span>Registered Non-Profit · Ontario</span>
+        </p>
       </footer>
     </div>
   )

@@ -5,13 +5,9 @@ export function Colophon() {
         <p className="font-meta text-[10px] tracking-[0.25em] text-ink/40 flex flex-wrap items-center gap-x-3 gap-y-1">
           <span>Rebrief Magazine</span>
           <span className="text-gold">·</span>
-          <span>Treasury · MMXXVI</span>
-          <span className="text-gold">·</span>
-          <span>Imprinted Tkaronto</span>
+          <span>Treasury</span>
           <span className="text-gold">·</span>
           <span>Registered Non-Profit · Ontario</span>
-          <span className="text-gold">·</span>
-          <span>43°38′N 79°25′W</span>
         </p>
       </div>
     </footer>

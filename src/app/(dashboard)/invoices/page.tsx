@@ -47,7 +47,7 @@ export default async function InvoicesPage() {
   return (
     <>
       <SectionHead
-        eyebrow="MMXXVI · The Treasury"
+        eyebrow="The Treasury"
         title="Invoices"
         marginalia={
           <div className="font-meta text-[10px] tracking-[0.22em] text-ink/50 leading-relaxed space-y-1">
