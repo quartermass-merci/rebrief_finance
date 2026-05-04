@@ -36,7 +36,7 @@ export function ExpenseWorkbench({ expenses }: { expenses: Expense[] }) {
   const filtered = catFilter === 'all' ? expenses : expenses.filter((e) => e.category === catFilter)
 
   function handleDelete(id: string, desc: string) {
-    if (!confirm(`Strike "${desc}" from the ledger? This cannot be undone.`)) return
+    if (!confirm(`Delete "${desc}"? This cannot be undone.`)) return
     startTransition(async () => {
       await deleteExpense(id)
       router.refresh()
@@ -155,16 +155,17 @@ export function ExpenseWorkbench({ expenses }: { expenses: Expense[] }) {
                 )}
                 <button
                   onClick={() => setEditing(exp)}
-                  className="font-meta text-[9px] tracking-[0.2em] text-ink/50 hover:text-ink transition-colors uppercase"
+                  className="font-meta text-[10px] tracking-[0.2em] text-ink/55 hover:text-ink transition-colors uppercase"
                 >
                   Edit
                 </button>
                 <button
                   onClick={() => handleDelete(exp.id, exp.description)}
                   disabled={isPending}
-                  className="font-meta text-[9px] tracking-[0.2em] text-ink/30 hover:text-orange transition-colors uppercase"
+                  className="font-meta text-[10px] tracking-[0.2em] text-orange/70 hover:text-orange transition-colors uppercase"
+                  title="Delete this expense"
                 >
-                  Strike
+                  Delete
                 </button>
               </div>
             </article>

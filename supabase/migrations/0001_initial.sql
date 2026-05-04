@@ -15,7 +15,8 @@ create table invoices (
   description   text,
   line_items    jsonb not null default '[]',
   subtotal      numeric(10,2) not null default 0,
-  tax_rate      numeric(5,2) not null default 13,
+  tax_rate      numeric(5,2) not null default 0, -- Rebrief is not HST-registered
+
   tax_amount    numeric(10,2) not null default 0,
   total         numeric(10,2) not null default 0,
   status        text not null default 'draft'

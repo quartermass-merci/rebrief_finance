@@ -2,7 +2,7 @@
 
 import { useState, useTransition, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { createInvoice, updateInvoice } from '@/app/actions/invoices'
+import { createInvoice, updateInvoice, deleteInvoice } from '@/app/actions/invoices'
 import type { Invoice, LineItem, ExtractedInvoice } from '@/lib/types'
 
 interface Props {
@@ -20,7 +20,12 @@ export function InvoiceForm({ invoice, nextNumber, prefill, onClose }: Props) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState('')
-  const [taxRate, setTaxRate] = useState<number>(invoice?.tax_rate ?? prefill?.tax_rate ?? 13)
+  // Rebrief is a non-profit under the $50K Small Supplier threshold and
+  // is NOT HST-registered, so invoices issued by Rebrief charge no tax by
+  // default. Only set this above 0 if Rebrief has voluntarily registered
+  // for HST (then 13 for Ontario), or if the prefill came from a vendor's
+  // invoice that legitimately shows tax.
+  const [taxRate, setTaxRate] = useState<number>(invoice?.tax_rate ?? prefill?.tax_rate ?? 0)
 
   const initialLineItems: LineItem[] = invoice?.line_items?.length
     ? invoice.line_items
@@ -91,6 +96,20 @@ export function InvoiceForm({ invoice, nextNumber, prefill, onClose }: Props) {
     })
   }
 
+  async function handleDelete() {
+    if (!invoice) return
+    if (!confirm(`Delete invoice ${invoice.invoice_number}? This cannot be undone.`)) return
+
+    startTransition(async () => {
+      try {
+        await deleteInvoice(invoice.id)
+        onClose()
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Could not delete')
+      }
+    })
+  }
+
   const isEditing = !!invoice
   const titleText = isEditing ? 'Editing' : prefill ? 'Reviewing' : 'Composing'
 
@@ -114,6 +133,16 @@ export function InvoiceForm({ invoice, nextNumber, prefill, onClose }: Props) {
           >
             ‹ Back to Ledger
           </button>
+          {isEditing && (
+            <button
+              type="button"
+              onClick={handleDelete}
+              disabled={isPending}
+              className="font-meta text-[10px] tracking-[0.22em] text-orange/70 hover:text-orange transition-colors uppercase disabled:opacity-50"
+            >
+              Delete Invoice
+            </button>
+          )}
           <button
             type="submit"
             disabled={isPending}
@@ -346,6 +375,11 @@ export function InvoiceForm({ invoice, nextNumber, prefill, onClose }: Props) {
                 }
                 value={fmt(totals.tax)}
               />
+              {taxRate === 0 && (
+                <p className="font-body italic text-ink/50 leading-snug -mt-2" style={{ fontSize: '0.85em' }}>
+                  Rebrief is not HST-registered (Small Supplier). No tax collected.
+                </p>
+              )}
               <div className="rule-top pt-4 mt-2">
                 <p className="font-meta text-[10px] tracking-[0.25em] text-ink/45 mb-1">
                   Total Due

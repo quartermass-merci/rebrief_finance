@@ -2,7 +2,7 @@
 
 import { useState, useTransition, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { createExpense, updateExpense } from '@/app/actions/expenses'
+import { createExpense, updateExpense, deleteExpense } from '@/app/actions/expenses'
 import type { Expense, ExtractedExpense } from '@/lib/types'
 import { EXPENSE_CATEGORIES } from '@/lib/types'
 
@@ -49,6 +49,20 @@ export function ExpenseForm({ expense, prefill, onClose }: Props) {
     })
   }
 
+  async function handleDelete() {
+    if (!expense) return
+    if (!confirm(`Delete this expense entry? This cannot be undone.`)) return
+
+    startTransition(async () => {
+      try {
+        await deleteExpense(expense.id)
+        onClose()
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Could not delete')
+      }
+    })
+  }
+
   const isEditing = !!expense
   const titleText = isEditing ? 'Editing' : prefill ? 'Reviewing' : 'Composing'
 
@@ -71,6 +85,16 @@ export function ExpenseForm({ expense, prefill, onClose }: Props) {
           >
             ‹ Back to Ledger
           </button>
+          {isEditing && (
+            <button
+              type="button"
+              onClick={handleDelete}
+              disabled={isPending}
+              className="font-meta text-[10px] tracking-[0.22em] text-orange/70 hover:text-orange transition-colors uppercase disabled:opacity-50"
+            >
+              Delete Expense
+            </button>
+          )}
           <button
             type="submit"
             disabled={isPending}

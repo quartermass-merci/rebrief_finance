@@ -66,7 +66,7 @@ export function InvoiceWorkbench({ invoices, nextNumber }: Props) {
   }
 
   function handleDelete(id: string, num: string) {
-    if (!confirm(`Strike invoice ${num} from the ledger? This cannot be undone.`)) return
+    if (!confirm(`Delete invoice ${num}? This cannot be undone.`)) return
     startTransition(async () => {
       await deleteInvoice(id)
       router.refresh()
@@ -203,15 +203,17 @@ export function InvoiceWorkbench({ invoices, nextNumber }: Props) {
                 )}
                 <button
                   onClick={() => setEditing(inv)}
-                  className="font-meta text-[9px] tracking-[0.2em] text-ink/50 hover:text-ink transition-colors uppercase"
+                  className="font-meta text-[10px] tracking-[0.2em] text-ink/55 hover:text-ink transition-colors uppercase"
                 >
                   Edit
                 </button>
                 <button
                   onClick={() => handleDelete(inv.id, inv.invoice_number)}
-                  className="font-meta text-[9px] tracking-[0.2em] text-ink/30 hover:text-orange transition-colors uppercase"
+                  disabled={isPending}
+                  className="font-meta text-[10px] tracking-[0.2em] text-orange/70 hover:text-orange transition-colors uppercase"
+                  title={`Delete invoice ${inv.invoice_number}`}
                 >
-                  Strike
+                  Delete
                 </button>
               </div>
             </article>
