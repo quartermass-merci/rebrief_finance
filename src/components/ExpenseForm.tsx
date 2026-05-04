@@ -1,24 +1,28 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState, useTransition, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { createExpense, updateExpense } from '@/app/actions/expenses'
 import type { Expense } from '@/lib/types'
 import { EXPENSE_CATEGORIES } from '@/lib/types'
-
-const inputClass =
-  'w-full px-3 py-2 border border-rebrief-cream rounded-sm text-sm bg-rebrief-light/50 focus:outline-none focus:border-rebrief-gold focus:ring-1 focus:ring-rebrief-gold'
-const labelClass = 'block text-[10px] font-medium text-rebrief-dark/50 mb-1 uppercase tracking-wider'
 
 interface Props {
   expense?: Expense
   onClose: () => void
 }
 
+function fmt(n: number) {
+  return new Intl.NumberFormat('en-CA', { style: 'currency', currency: 'CAD' }).format(n)
+}
+
 export function ExpenseForm({ expense, onClose }: Props) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState('')
+  const [amount, setAmount] = useState<number>(expense?.amount ?? 0)
+  const [taxAmount, setTaxAmount] = useState<number>(expense?.tax_amount ?? 0)
+
+  const total = useMemo(() => Math.round((amount + taxAmount) * 100) / 100, [amount, taxAmount])
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -34,85 +38,188 @@ export function ExpenseForm({ expense, onClose }: Props) {
           await createExpense(formData)
         }
         onClose()
-        router.refresh()
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Something went wrong')
       }
     })
   }
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center pt-16 px-4 bg-rebrief-dark/40">
-      <div className="bg-white border border-rebrief-cream rounded-sm w-full max-w-lg shadow-lg">
-        <div className="px-6 py-4 border-b border-rebrief-cream flex items-center justify-between">
-          <h2 className="font-display text-lg tracking-wide uppercase">
-            {expense ? 'Edit Expense' : 'New Expense'}
-          </h2>
-          <button onClick={onClose} className="text-rebrief-dark/30 hover:text-rebrief-dark text-xl leading-none">&times;</button>
-        </div>
+  const isEditing = !!expense
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className={labelClass}>Vendor</label>
-              <input name="vendor" defaultValue={expense?.vendor || ''} className={inputClass} />
-            </div>
-            <div>
-              <label className={labelClass}>Category</label>
-              <select name="category" defaultValue={expense?.category || 'other'} required className={inputClass}>
+  return (
+    <form onSubmit={handleSubmit}>
+      <section className="pt-10 pb-6 rule-bottom flex flex-wrap items-baseline justify-between gap-y-3">
+        <div>
+          <p className="font-meta text-[10px] tracking-[0.25em] text-gold mb-2">
+            {isEditing ? 'Editing' : 'Composing'} · Manual Entry
+          </p>
+          <h2 className="font-display text-[44px] md:text-[64px] leading-[0.92] tracking-tight">
+            {isEditing ? 'Expense Entry' : 'New Expense'}
+          </h2>
+        </div>
+        <div className="flex items-baseline gap-6">
+          <button
+            type="button"
+            onClick={onClose}
+            className="font-meta text-[10px] tracking-[0.22em] text-ink/40 hover:text-ink transition-colors"
+          >
+            ‹ Back to Ledger
+          </button>
+          <button
+            type="submit"
+            disabled={isPending}
+            className="btn-rebrief-primary disabled:opacity-50"
+          >
+            {isPending ? 'Filing...' : isEditing ? 'Save Changes' : 'File to Ledger'}
+          </button>
+        </div>
+      </section>
+
+      <div className="grid grid-cols-12 gap-x-8 gap-y-10 pt-10 pb-10">
+        <div className="col-span-12 md:col-span-8 space-y-8">
+          <div className="grid grid-cols-2 gap-x-6 gap-y-5">
+            <Field label="Vendor">
+              <input
+                name="vendor"
+                defaultValue={expense?.vendor || ''}
+                className="input-ruled"
+                placeholder="Whose invoice is this?"
+              />
+            </Field>
+            <Field label="Category">
+              <select name="category" defaultValue={expense?.category || 'other'} required className="input-ruled">
                 {EXPENSE_CATEGORIES.map((c) => (
                   <option key={c.value} value={c.value}>{c.label}</option>
                 ))}
               </select>
-            </div>
+            </Field>
           </div>
 
-          <div>
-            <label className={labelClass}>Description</label>
-            <input name="description" defaultValue={expense?.description || ''} required className={inputClass} />
+          <Field label="Description" full>
+            <input
+              name="description"
+              defaultValue={expense?.description || ''}
+              required
+              className="input-ruled font-body text-[16px]"
+              placeholder="What was bought?"
+            />
+          </Field>
+
+          <div className="grid grid-cols-3 gap-x-6 gap-y-5">
+            <Field label="Amount Paid">
+              <input
+                name="amount"
+                type="number"
+                step="0.01"
+                value={amount || ''}
+                onChange={(e) => setAmount(parseFloat(e.target.value) || 0)}
+                required
+                className="input-ruled tabular-nums"
+              />
+            </Field>
+            <Field label="HST Paid">
+              <input
+                name="tax_amount"
+                type="number"
+                step="0.01"
+                value={taxAmount || ''}
+                onChange={(e) => setTaxAmount(parseFloat(e.target.value) || 0)}
+                className="input-ruled tabular-nums"
+              />
+            </Field>
+            <Field label="Date">
+              <input
+                name="expense_date"
+                type="date"
+                defaultValue={expense?.expense_date || new Date().toISOString().split('T')[0]}
+                required
+                className="input-ruled tabular-nums"
+              />
+            </Field>
           </div>
 
-          <div className="grid grid-cols-3 gap-4">
-            <div>
-              <label className={labelClass}>Amount ($)</label>
-              <input name="amount" type="number" step="0.01" defaultValue={expense?.amount || ''} required className={inputClass} />
-            </div>
-            <div>
-              <label className={labelClass}>HST ($)</label>
-              <input name="tax_amount" type="number" step="0.01" defaultValue={expense?.tax_amount || 0} className={inputClass} />
-            </div>
-            <div>
-              <label className={labelClass}>Date</label>
-              <input name="expense_date" type="date" defaultValue={expense?.expense_date || new Date().toISOString().split('T')[0]} required className={inputClass} />
-            </div>
-          </div>
+          <Field label="Receipt URL" full>
+            <input
+              name="receipt_url"
+              type="url"
+              defaultValue={expense?.receipt_url || ''}
+              className="input-ruled"
+              placeholder="optional — link to scanned receipt or cloud doc"
+            />
+          </Field>
 
-          <div>
-            <label className={labelClass}>Receipt URL</label>
-            <input name="receipt_url" type="url" defaultValue={expense?.receipt_url || ''} placeholder="https://..." className={inputClass} />
-          </div>
+          <Field label="Notes" full>
+            <textarea
+              name="notes"
+              rows={3}
+              defaultValue={expense?.notes || ''}
+              className="input-ruled resize-none"
+              placeholder="optional — any context for the audit trail"
+            />
+          </Field>
 
-          <div>
-            <label className={labelClass}>Notes</label>
-            <textarea name="notes" rows={2} defaultValue={expense?.notes || ''} className={inputClass} />
-          </div>
+          {error && (
+            <p className="font-meta text-[11px] tracking-[0.15em] text-orange uppercase">
+              {error}
+            </p>
+          )}
+        </div>
 
-          {error && <p className="text-sm text-rebrief-red">{error}</p>}
+        <aside className="col-span-12 md:col-span-4 md:pl-8 md:border-l md:border-rule">
+          <div className="md:sticky md:top-24">
+            <h3 className="font-meta text-[10px] tracking-[0.25em] text-ink/45 mb-6">
+              Filing Total
+            </h3>
 
-          <div className="flex gap-3 justify-end pt-2">
-            <button type="button" onClick={onClose} className="px-4 py-2 text-xs uppercase tracking-wider text-rebrief-dark/50 hover:text-rebrief-dark transition-colors">
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={isPending}
-              className="px-5 py-2 bg-rebrief-dark text-rebrief-light text-xs font-medium tracking-wider uppercase rounded-sm hover:bg-rebrief-gold transition-colors disabled:opacity-50"
-            >
-              {isPending ? 'Saving...' : expense ? 'Update' : 'Add Expense'}
-            </button>
+            <dl className="space-y-3">
+              <Row label="Amount" value={fmt(amount)} />
+              <Row label="HST" value={fmt(taxAmount)} />
+              <div className="rule-top pt-4 mt-2">
+                <p className="font-meta text-[10px] tracking-[0.25em] text-ink/45 mb-1">
+                  Total Out
+                </p>
+                <p className="font-display text-[44px] tabular-nums leading-none tracking-tight text-orange">
+                  −{fmt(total)}
+                </p>
+                <p className="font-meta text-[9px] tracking-[0.22em] text-ink/40 mt-2">CAD</p>
+              </div>
+            </dl>
+
+            <p className="mt-8 pt-6 rule-top font-body text-[12px] italic text-ink/55 leading-relaxed">
+              All entries become part of the running ledger. Strike or edit as needed —
+              every change is timestamped.
+            </p>
           </div>
-        </form>
+        </aside>
       </div>
+    </form>
+  )
+}
+
+function Field({
+  label,
+  children,
+  full,
+}: {
+  label: string
+  children: React.ReactNode
+  full?: boolean
+}) {
+  return (
+    <label className={`block ${full ? 'col-span-2' : ''}`}>
+      <span className="block font-meta text-[10px] tracking-[0.22em] text-ink/45 mb-1.5">
+        {label}
+      </span>
+      {children}
+    </label>
+  )
+}
+
+function Row({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-baseline justify-between rule-bottom-faint pb-3">
+      <dt className="font-meta text-[10px] tracking-[0.22em] text-ink/55 uppercase">{label}</dt>
+      <dd className="font-display text-[18px] tabular-nums tracking-tight">{value}</dd>
     </div>
   )
 }

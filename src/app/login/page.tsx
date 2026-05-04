@@ -27,61 +27,86 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-rebrief-light px-4">
-      <div className="w-full max-w-sm">
-        <div className="mb-10 flex justify-center">
-          <img
-            src="/rebrief-masthead.svg"
-            alt="Rebrief"
-            className="h-8 opacity-80"
-          />
-        </div>
+    <div className="min-h-screen bg-paper flex flex-col">
+      {/* Top wire strip */}
+      <header className="rule-bottom px-6 md:px-10 py-3">
+        <p className="font-display text-[12px] tracking-[0.22em] uppercase text-ink/60">
+          Rebrief <span className="text-gold mx-1">·</span> Treasury
+        </p>
+      </header>
 
-        <div className="bg-white border border-rebrief-cream rounded-sm p-8 shadow-sm">
-          <p className="font-meta text-[10px] tracking-[0.2em] uppercase text-rebrief-gold mb-6 text-center">
-            Financial Dashboard
-          </p>
-
-          <form onSubmit={handleSubmit}>
-            <label
-              htmlFor="password"
-              className="block text-xs font-medium text-rebrief-dark/60 mb-2 uppercase tracking-wider"
+      {/* The cover */}
+      <main className="flex-1 flex items-center justify-center px-6 py-16">
+        <div className="w-full max-w-2xl">
+          <div className="text-center mb-16">
+            <p className="font-meta text-[10px] tracking-[0.3em] text-gold mb-6">
+              MMXXVI · A Closed Ledger
+            </p>
+            <h1
+              className="font-display tracking-tight leading-[0.92] mb-6"
+              style={{ fontSize: 'clamp(60px, 13vw, 156px)' }}
             >
-              Password
+              Treasury
+            </h1>
+            <div className="flex items-center justify-center gap-4">
+              <span className="h-px w-12 bg-rule" />
+              <p className="font-meta text-[10px] tracking-[0.25em] text-ink/55">
+                For Treasurers Only
+              </p>
+              <span className="h-px w-12 bg-rule" />
+            </div>
+          </div>
+
+          <form onSubmit={handleSubmit} className="max-w-md mx-auto">
+            <label className="block mb-1">
+              <span className="block font-meta text-[10px] tracking-[0.22em] text-ink/50 mb-2">
+                Password
+              </span>
+              <input
+                id="password"
+                name="password"
+                type="password"
+                autoFocus
+                required
+                className="input-ruled font-body text-[18px] tracking-[0.05em] py-3"
+                placeholder="•••••••••••••••"
+              />
             </label>
-            <input
-              id="password"
-              name="password"
-              type="password"
-              autoFocus
-              required
-              className="w-full px-3 py-2.5 border border-rebrief-cream rounded-sm text-sm
-                         focus:outline-none focus:border-rebrief-gold focus:ring-1 focus:ring-rebrief-gold
-                         bg-rebrief-light/50 placeholder:text-rebrief-dark/30"
-              placeholder="Enter dashboard password"
-            />
 
             {error && (
-              <p className="mt-2 text-xs text-rebrief-red">{error}</p>
+              <p className="mt-3 font-meta text-[10px] tracking-[0.22em] text-orange uppercase">
+                {error}
+              </p>
             )}
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="mt-5 w-full py-2.5 bg-rebrief-dark text-rebrief-light text-sm font-medium
-                         tracking-wider uppercase rounded-sm
-                         hover:bg-rebrief-gold transition-colors
-                         disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {loading ? 'Verifying...' : 'Enter'}
-            </button>
+            <div className="mt-10 flex items-center justify-between">
+              <p className="font-body text-[12px] italic text-ink/45">
+                {loading ? 'Verifying...' : 'Read by the keeper of the books.'}
+              </p>
+              <button
+                type="submit"
+                disabled={loading}
+                className="btn-rebrief-primary disabled:opacity-50"
+              >
+                {loading ? 'Opening...' : 'Open the Ledger'}
+              </button>
+            </div>
           </form>
         </div>
+      </main>
 
-        <p className="mt-6 text-center text-[10px] text-rebrief-dark/30 font-meta tracking-wider uppercase">
-          Rebrief Magazine &middot; Registered Non-Profit &middot; Ontario
+      {/* Colophon */}
+      <footer className="rule-top px-6 md:px-10 py-5">
+        <p className="font-meta text-[9px] tracking-[0.25em] text-ink/40 flex flex-wrap items-center gap-x-3 gap-y-1">
+          <span>Rebrief Magazine</span>
+          <span className="text-gold">·</span>
+          <span>Imprinted Tkaronto</span>
+          <span className="text-gold">·</span>
+          <span>Registered Non-Profit · Ontario</span>
+          <span className="text-gold">·</span>
+          <span>43°38′N 79°25′W</span>
         </p>
-      </div>
+      </footer>
     </div>
   )
 }

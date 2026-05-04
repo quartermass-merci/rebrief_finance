@@ -1,7 +1,7 @@
 import { supabase } from '@/lib/supabase'
 import type { Invoice } from '@/lib/types'
-import { InvoiceTable } from '@/components/InvoiceTable'
-import { InvoiceFormWrapper } from '@/components/InvoiceFormWrapper'
+import { SectionHead } from '@/components/SectionHead'
+import { InvoiceWorkbench } from '@/components/InvoiceWorkbench'
 
 export const dynamic = 'force-dynamic'
 
@@ -32,31 +32,41 @@ async function getNextNumber(): Promise<string> {
   return 'INV-001'
 }
 
+function fmt(n: number) {
+  return new Intl.NumberFormat('en-CA', { style: 'currency', currency: 'CAD' }).format(n)
+}
+
 export default async function InvoicesPage() {
   const [invoices, nextNumber] = await Promise.all([getInvoices(), getNextNumber()])
 
   const outstanding = invoices.filter((i) => i.status === 'sent' || i.status === 'overdue')
   const totalOutstanding = outstanding.reduce((s, i) => s + Number(i.total), 0)
+  const drafts = invoices.filter((i) => i.status === 'draft')
+  const paid = invoices.filter((i) => i.status === 'paid')
 
   return (
-    <div>
-      <div className="flex items-baseline justify-between mb-8">
-        <h1 className="font-display text-2xl tracking-wide uppercase">Invoices</h1>
-        <div className="text-right">
-          <p className="text-sm tabular-nums">
-            <span className="text-rebrief-dark/40">Outstanding: </span>
-            <span className="font-medium">
-              {new Intl.NumberFormat('en-CA', { style: 'currency', currency: 'CAD' }).format(totalOutstanding)}
-            </span>
-          </p>
-          <p className="text-[10px] text-rebrief-dark/30 mt-0.5">
-            {outstanding.length} invoice{outstanding.length !== 1 ? 's' : ''} pending
-          </p>
-        </div>
-      </div>
+    <>
+      <SectionHead
+        eyebrow="MMXXVI · The Treasury"
+        title="Invoices"
+        marginalia={
+          <div className="font-meta text-[10px] tracking-[0.22em] text-ink/50 leading-relaxed space-y-1">
+            <p>
+              <span className="text-gold">{drafts.length}</span> draft{drafts.length !== 1 ? 's' : ''}
+              <span className="mx-2 text-ink/30">·</span>
+              <span className="text-gold">{outstanding.length}</span> outstanding
+              <span className="mx-2 text-ink/30">·</span>
+              <span className="text-gold">{paid.length}</span> paid
+            </p>
+            <p className="text-ink tracking-[0.2em]">
+              Outstanding <span className="text-gold">·</span>{' '}
+              <span className="font-display text-[16px] tabular-nums">{fmt(totalOutstanding)}</span>
+            </p>
+          </div>
+        }
+      />
 
-      <InvoiceFormWrapper nextNumber={nextNumber} />
-      <InvoiceTable invoices={invoices} />
-    </div>
+      <InvoiceWorkbench invoices={invoices} nextNumber={nextNumber} />
+    </>
   )
 }

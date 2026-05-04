@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 
 interface LedgerEntry {
   id: string
@@ -13,23 +13,64 @@ interface LedgerEntry {
 }
 
 function fmt(n: number) {
-  return new Intl.NumberFormat('en-CA', { style: 'currency', currency: 'CAD' }).format(n)
+  const abs = Math.abs(n)
+  return new Intl.NumberFormat('en-CA', { style: 'currency', currency: 'CAD' }).format(abs)
+}
+
+function formatDateBroad(iso: string): string {
+  if (!iso) return '—'
+  const d = new Date(iso + (iso.includes('T') ? '' : 'T00:00:00'))
+  if (isNaN(d.getTime())) return iso
+  return d.toLocaleDateString('en-CA', { day: '2-digit', month: 'short' })
+    .toUpperCase().replace(/\./g, '')
+}
+
+function getYear(iso: string): number {
+  if (!iso) return 0
+  return parseInt(iso.split('-')[0], 10)
+}
+
+const ROMAN_YEARS: Record<number, string> = {
+  2024: 'MMXXIV',
+  2025: 'MMXXV',
+  2026: 'MMXXVI',
+  2027: 'MMXXVII',
+  2028: 'MMXXVIII',
+  2029: 'MMXXIX',
+  2030: 'MMXXX',
 }
 
 export function LedgerView({ entries }: { entries: LedgerEntry[] }) {
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
 
-  const filtered = entries.filter((e) => {
-    if (dateFrom && e.entry_date < dateFrom) return false
-    if (dateTo && e.entry_date > dateTo) return false
-    return true
-  })
+  const filtered = useMemo(() => {
+    return entries.filter((e) => {
+      if (dateFrom && e.entry_date < dateFrom) return false
+      if (dateTo && e.entry_date > dateTo) return false
+      return true
+    })
+  }, [entries, dateFrom, dateTo])
 
-  const reversed = [...filtered].reverse()
+  // Reverse chronological for display, but group by year
+  const grouped = useMemo(() => {
+    const reversed = [...filtered].reverse()
+    const groups: { year: number; entries: LedgerEntry[] }[] = []
+    let currentYear = -1
+    for (const entry of reversed) {
+      const y = getYear(entry.entry_date)
+      if (y !== currentYear) {
+        groups.push({ year: y, entries: [entry] })
+        currentYear = y
+      } else {
+        groups[groups.length - 1].entries.push(entry)
+      }
+    }
+    return groups
+  }, [filtered])
 
   function exportCSV() {
-    const headers = ['Date', 'Type', 'Reference', 'Description', 'Amount', 'Running Balance']
+    const headers = ['Date', 'Type', 'Reference', 'Description', 'Amount CAD', 'Running Balance CAD']
     const rows = filtered.map((e) => [
       e.entry_date,
       e.type,
@@ -51,88 +92,120 @@ export function LedgerView({ entries }: { entries: LedgerEntry[] }) {
 
   return (
     <>
-      <div className="flex items-center gap-3 mb-4">
-        <div className="flex items-center gap-2">
-          <label className="text-[10px] uppercase tracking-wider text-rebrief-dark/40">From</label>
+      {/* Filter strip */}
+      <section className="py-5 rule-bottom flex flex-wrap items-baseline gap-x-8 gap-y-3">
+        <span className="font-meta text-[10px] tracking-[0.25em] text-ink/45">Filter</span>
+
+        <label className="flex items-baseline gap-2">
+          <span className="font-meta text-[9px] tracking-[0.22em] text-ink/45">From</span>
           <input
             type="date"
             value={dateFrom}
             onChange={(e) => setDateFrom(e.target.value)}
-            className="px-2 py-1 border border-rebrief-cream rounded-sm text-xs bg-white focus:outline-none focus:border-rebrief-gold"
+            className="bg-transparent border-0 border-b border-rule outline-none focus:border-gold font-body text-[13px] tabular-nums py-0.5"
           />
-        </div>
-        <div className="flex items-center gap-2">
-          <label className="text-[10px] uppercase tracking-wider text-rebrief-dark/40">To</label>
+        </label>
+
+        <label className="flex items-baseline gap-2">
+          <span className="font-meta text-[9px] tracking-[0.22em] text-ink/45">To</span>
           <input
             type="date"
             value={dateTo}
             onChange={(e) => setDateTo(e.target.value)}
-            className="px-2 py-1 border border-rebrief-cream rounded-sm text-xs bg-white focus:outline-none focus:border-rebrief-gold"
+            className="bg-transparent border-0 border-b border-rule outline-none focus:border-gold font-body text-[13px] tabular-nums py-0.5"
           />
-        </div>
+        </label>
+
         {(dateFrom || dateTo) && (
           <button
             onClick={() => { setDateFrom(''); setDateTo('') }}
-            className="text-[10px] uppercase tracking-wider text-rebrief-dark/30 hover:text-rebrief-dark"
+            className="font-meta text-[10px] tracking-[0.22em] text-ink/40 hover:text-ink transition-colors"
           >
             Clear
           </button>
         )}
-        <div className="flex-1" />
+
+        <span className="ml-auto" />
+
         <button
           onClick={exportCSV}
-          className="px-3 py-1.5 border border-rebrief-cream text-xs uppercase tracking-wider
-                     text-rebrief-dark/50 hover:text-rebrief-dark hover:border-rebrief-dark/20 rounded-sm transition-colors"
+          className="font-meta text-[10px] tracking-[0.22em] text-ink hover:text-gold transition-colors flex items-baseline gap-2"
         >
           Export CSV
+          <span className="text-gold">↓</span>
         </button>
-      </div>
+      </section>
 
-      <div className="bg-white border border-rebrief-cream rounded-sm overflow-hidden">
-        <div className="grid grid-cols-[100px_70px_1fr_120px_120px] gap-0 px-5 py-2.5 border-b border-rebrief-cream bg-rebrief-cream/30">
-          <span className="text-[9px] uppercase tracking-wider text-rebrief-dark/40 font-meta">Date</span>
-          <span className="text-[9px] uppercase tracking-wider text-rebrief-dark/40 font-meta">Type</span>
-          <span className="text-[9px] uppercase tracking-wider text-rebrief-dark/40 font-meta">Description</span>
-          <span className="text-[9px] uppercase tracking-wider text-rebrief-dark/40 font-meta text-right">Amount</span>
-          <span className="text-[9px] uppercase tracking-wider text-rebrief-dark/40 font-meta text-right">Balance</span>
-        </div>
-
-        {reversed.length === 0 ? (
-          <p className="px-5 py-8 text-sm text-rebrief-dark/30 text-center">
-            No ledger entries. Paid invoices and expenses will appear here.
+      {/* Broadsheet ledger entries — grouped by year */}
+      <section className="pb-10">
+        {filtered.length === 0 ? (
+          <p className="py-20 text-center font-body text-[16px] italic text-ink/40">
+            No entries to strike. Paid invoices and recorded expenses will populate the ledger here.
           </p>
         ) : (
-          reversed.map((entry) => (
-            <div
-              key={entry.id + entry.type}
-              className={`grid grid-cols-[100px_70px_1fr_120px_120px] gap-0 px-5 py-3 border-b border-rebrief-cream/40 items-center ${
-                entry.type === 'income' ? 'bg-emerald-50/30' : 'bg-rebrief-red/[0.02]'
-              }`}
-            >
-              <span className="text-xs text-rebrief-dark/50 tabular-nums">{entry.entry_date}</span>
-              <span className={`text-[10px] uppercase tracking-wider ${
-                entry.type === 'income' ? 'text-emerald-600' : 'text-rebrief-dark/40'
-              }`}>
-                {entry.type === 'income' ? 'In' : 'Out'}
-              </span>
-              <div className="min-w-0">
-                <p className="text-sm truncate">{entry.description}</p>
-                <p className="text-[10px] text-rebrief-dark/30 uppercase tracking-wider">{entry.reference}</p>
+          grouped.map((group) => (
+            <div key={group.year} className="mb-12 last:mb-0">
+              {/* Year header — Latin numerals */}
+              <header className="py-4 rule-top rule-bottom flex items-baseline justify-between mb-2">
+                <h2 className="font-display text-[28px] md:text-[36px] tracking-tight">
+                  {ROMAN_YEARS[group.year] || group.year}
+                </h2>
+                <p className="font-meta text-[10px] tracking-[0.25em] text-ink/45">
+                  {group.entries.length} entr{group.entries.length === 1 ? 'y' : 'ies'}
+                </p>
+              </header>
+
+              {/* Column header */}
+              <div className="hidden md:grid grid-cols-[80px_70px_1fr_140px_160px] gap-4 py-2 rule-bottom-faint">
+                <span className="font-meta text-[9px] tracking-[0.22em] text-ink/45">Date</span>
+                <span className="font-meta text-[9px] tracking-[0.22em] text-ink/45">Type</span>
+                <span className="font-meta text-[9px] tracking-[0.22em] text-ink/45">Description</span>
+                <span className="font-meta text-[9px] tracking-[0.22em] text-ink/45 text-right">Amount</span>
+                <span className="font-meta text-[9px] tracking-[0.22em] text-ink/45 text-right">Running Balance</span>
               </div>
-              <span className={`text-sm font-medium tabular-nums text-right ${
-                entry.type === 'income' ? 'text-emerald-700' : 'text-rebrief-dark/70'
-              }`}>
-                {entry.type === 'income' ? '+' : ''}{fmt(entry.amount)}
-              </span>
-              <span className={`text-sm tabular-nums text-right font-medium ${
-                entry.running_balance >= 0 ? 'text-rebrief-gold' : 'text-rebrief-red'
-              }`}>
-                {fmt(entry.running_balance)}
-              </span>
+
+              {/* Entries */}
+              {group.entries.map((entry) => (
+                <article
+                  key={entry.id + entry.type}
+                  className="grid grid-cols-2 md:grid-cols-[80px_70px_1fr_140px_160px] gap-4 py-3.5 rule-bottom-faint items-baseline"
+                >
+                  <time className="font-meta text-[10px] tracking-[0.18em] text-ink/55 tabular-nums">
+                    {formatDateBroad(entry.entry_date)}
+                  </time>
+                  <span
+                    className={`font-meta text-[9px] tracking-[0.22em] uppercase ${
+                      entry.type === 'income' ? 'text-green' : 'text-orange'
+                    }`}
+                  >
+                    {entry.type === 'income' ? 'In' : 'Out'}
+                  </span>
+                  <div className="col-span-2 md:col-span-1 row-start-2 md:row-start-auto">
+                    <p className="font-body text-[14px] text-ink leading-snug">
+                      <span className="text-ink/40 mr-2">{entry.reference}</span>
+                      {entry.description}
+                    </p>
+                  </div>
+                  <span
+                    className={`font-display text-[18px] tabular-nums tracking-tight text-right md:col-start-4 ${
+                      entry.type === 'income' ? 'text-green' : 'text-orange'
+                    }`}
+                  >
+                    {entry.type === 'income' ? '+' : '−'}{fmt(entry.amount)}
+                  </span>
+                  <span
+                    className={`font-display text-[18px] tabular-nums tracking-tight text-right md:col-start-5 ${
+                      entry.running_balance >= 0 ? 'text-ink' : 'text-orange'
+                    }`}
+                  >
+                    {entry.running_balance < 0 ? '−' : ''}{fmt(entry.running_balance)}
+                  </span>
+                </article>
+              ))}
             </div>
           ))
         )}
-      </div>
+      </section>
     </>
   )
 }

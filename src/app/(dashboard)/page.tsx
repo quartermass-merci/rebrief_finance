@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase'
 import type { DashboardStats, Invoice, Expense } from '@/lib/types'
+import { SectionHead } from '@/components/SectionHead'
 import Link from 'next/link'
 
 async function getStats(): Promise<DashboardStats> {
@@ -30,15 +31,16 @@ async function getStats(): Promise<DashboardStats> {
 
 async function getRecentActivity() {
   const [invoicesRes, expensesRes] = await Promise.all([
-    supabase.from('invoices').select('*').order('created_at', { ascending: false }).limit(5),
-    supabase.from('expenses').select('*').order('created_at', { ascending: false }).limit(5),
+    supabase.from('invoices').select('*').order('created_at', { ascending: false }).limit(8),
+    supabase.from('expenses').select('*').order('created_at', { ascending: false }).limit(8),
   ])
 
   const items = [
     ...(invoicesRes.data || []).map((i: Invoice) => ({
       id: i.id,
       type: 'invoice' as const,
-      description: `${i.invoice_number} — ${i.client_name}`,
+      reference: i.invoice_number,
+      description: i.client_name + (i.description ? ' — ' + i.description : ''),
       amount: Number(i.total),
       date: i.issued_date || i.created_at.split('T')[0],
       status: i.status,
@@ -46,19 +48,25 @@ async function getRecentActivity() {
     ...(expensesRes.data || []).map((e: Expense) => ({
       id: e.id,
       type: 'expense' as const,
-      description: `${e.vendor ? e.vendor + ': ' : ''}${e.description}`,
+      reference: e.category.toUpperCase().replace('_', ' '),
+      description: (e.vendor ? e.vendor + ' — ' : '') + e.description,
       amount: -Number(e.total),
       date: e.expense_date,
-      status: 'confirmed',
+      status: 'recorded',
     })),
   ]
 
   items.sort((a, b) => b.date.localeCompare(a.date))
-  return items.slice(0, 8)
+  return items.slice(0, 10)
 }
 
 function fmt(n: number) {
-  return new Intl.NumberFormat('en-CA', { style: 'currency', currency: 'CAD' }).format(n)
+  const abs = Math.abs(n)
+  return new Intl.NumberFormat('en-CA', { style: 'currency', currency: 'CAD', maximumFractionDigits: 2 }).format(abs)
+}
+
+function fmtSigned(n: number) {
+  return (n < 0 ? '−' : '') + fmt(n)
 }
 
 export const dynamic = 'force-dynamic'
@@ -66,75 +74,172 @@ export const dynamic = 'force-dynamic'
 export default async function OverviewPage() {
   const [stats, activity] = await Promise.all([getStats(), getRecentActivity()])
 
+  const balanceColor = stats.netBalance >= 0 ? 'text-ink' : 'text-orange'
+
   return (
-    <div>
-      <div className="flex items-baseline justify-between mb-8">
-        <h1 className="font-display text-2xl tracking-wide uppercase">Overview</h1>
-        <p className="font-meta text-[10px] tracking-[0.15em] uppercase text-rebrief-dark/40">
-          Rebrief Magazine &middot; Non-Profit
-        </p>
-      </div>
+    <>
+      <SectionHead
+        eyebrow="MMXXVI · The Treasury"
+        title="Overview"
+        marginalia={
+          <p className="font-meta text-[10px] tracking-[0.22em] text-ink/40 leading-relaxed">
+            A standing summary of paid invoices, recorded expenses, and the running balance.
+            Imprinted from Supabase.
+          </p>
+        }
+      />
 
-      <div className="grid grid-cols-4 gap-4 mb-10">
-        <StatCard label="Revenue" value={fmt(stats.totalRevenue)} sub="Paid invoices" accent="gold" />
-        <StatCard label="Expenses" value={fmt(stats.totalExpenses)} sub="Total spent" accent="dark" />
-        <StatCard label="Net Balance" value={fmt(stats.netBalance)} sub="In — Out" accent={stats.netBalance >= 0 ? 'gold' : 'red'} />
-        <StatCard label="Outstanding" value={fmt(stats.outstandingAmount)} sub={`${stats.outstandingCount} invoice${stats.outstandingCount !== 1 ? 's' : ''} pending`} accent={stats.overdueCount > 0 ? 'red' : 'dark'} />
-      </div>
-
-      {stats.overdueCount > 0 && (
-        <div className="mb-8 px-4 py-3 bg-rebrief-red/5 border border-rebrief-red/20 rounded-sm">
-          <p className="text-sm text-rebrief-red font-medium">
-            {stats.overdueCount} overdue invoice{stats.overdueCount !== 1 ? 's' : ''} totalling {fmt(stats.overdueAmount)}
+      {/* The Balance — asymmetric, dominant, the treasurer's main number */}
+      <section className="pt-14 pb-12 grid grid-cols-12 gap-x-8 gap-y-8 rule-bottom">
+        <div className="col-span-12 md:col-span-8">
+          <p className="font-meta text-[10px] tracking-[0.25em] text-ink/50 mb-3">
+            Net Balance · CAD
+          </p>
+          <p
+            className={`font-display tabular-nums leading-[0.85] tracking-tight ${balanceColor}`}
+            style={{ fontSize: 'clamp(72px, 14vw, 220px)' }}
+          >
+            {stats.netBalance < 0 && <span className="text-orange">−</span>}
+            {fmt(stats.netBalance)}
+          </p>
+          <p className="mt-4 font-body text-[14px] text-ink/55 max-w-md">
+            {stats.netBalance >= 0
+              ? 'The till is in the black. Money in less money out, accurate as of this load.'
+              : 'The till is in the red. Outstanding invoices may turn this around — see the ledger.'}
           </p>
         </div>
-      )}
 
-      <div className="bg-white border border-rebrief-cream rounded-sm">
-        <div className="px-5 py-3 border-b border-rebrief-cream flex items-center justify-between">
-          <h2 className="font-meta text-[10px] tracking-[0.2em] uppercase text-rebrief-dark/50">Recent Activity</h2>
-        </div>
-        <div className="divide-y divide-rebrief-cream/60">
-          {activity.length === 0 ? (
-            <p className="px-5 py-8 text-sm text-rebrief-dark/40 text-center">
-              No transactions yet. Start by{' '}
-              <Link href="/invoices" className="text-rebrief-gold underline">adding an invoice</Link> or{' '}
-              <Link href="/expenses" className="text-rebrief-gold underline">logging an expense</Link>.
-            </p>
-          ) : (
-            activity.map((item) => (
-              <div key={item.id} className="px-5 py-3 flex items-center gap-4">
-                <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${
-                  item.type === 'invoice' ? 'bg-rebrief-gold' : 'bg-rebrief-dark/30'
-                }`} />
-                <span className="text-sm flex-1 truncate">{item.description}</span>
-                <span className="text-xs text-rebrief-dark/40 flex-shrink-0">{item.date}</span>
-                <span className={`text-sm font-medium tabular-nums flex-shrink-0 w-28 text-right ${
-                  item.amount >= 0 ? 'text-rebrief-gold' : 'text-rebrief-dark/70'
-                }`}>
-                  {item.amount >= 0 ? '+' : ''}{fmt(item.amount)}
-                </span>
-              </div>
-            ))
+        <aside className="col-span-12 md:col-span-4 md:border-l md:border-rule md:pl-8 grid grid-cols-2 md:grid-cols-1 gap-y-6 gap-x-6">
+          <Marginal label="Money In" amount={stats.totalRevenue} tone="in" />
+          <Marginal label="Money Out" amount={stats.totalExpenses} tone="out" />
+          <Marginal
+            label="Outstanding"
+            amount={stats.outstandingAmount}
+            tone="neutral"
+            count={`${stats.outstandingCount} invoice${stats.outstandingCount !== 1 ? 's' : ''} pending`}
+          />
+          {stats.overdueCount > 0 && (
+            <Marginal
+              label="Overdue"
+              amount={stats.overdueAmount}
+              tone="overdue"
+              count={`${stats.overdueCount} past due`}
+            />
           )}
-        </div>
+        </aside>
+      </section>
+
+      {/* Wire strip — quick links */}
+      <div className="py-4 rule-bottom-faint flex flex-wrap items-center gap-x-6 gap-y-2">
+        <span className="font-meta text-[10px] tracking-[0.25em] text-ink/40">Quick Marks</span>
+        <Link href="/invoices" className="font-meta text-[10px] tracking-[0.22em] text-ink hover:text-gold transition-colors">
+          → New Invoice
+        </Link>
+        <Link href="/expenses" className="font-meta text-[10px] tracking-[0.22em] text-ink hover:text-gold transition-colors">
+          → Log Expense
+        </Link>
+        <Link href="/ledger" className="font-meta text-[10px] tracking-[0.22em] text-ink hover:text-gold transition-colors">
+          → Open Ledger
+        </Link>
       </div>
+
+      {/* Recent activity — broadsheet ledger feel, no card */}
+      <section className="pt-12 pb-8">
+        <header className="flex items-baseline justify-between mb-6">
+          <h2 className="font-display text-[28px] md:text-[36px] tracking-tight">
+            Recent Activity
+          </h2>
+          <p className="font-meta text-[10px] tracking-[0.22em] text-ink/40">
+            Last {activity.length} entr{activity.length === 1 ? 'y' : 'ies'}
+          </p>
+        </header>
+
+        {activity.length === 0 ? (
+          <div className="py-16 text-center">
+            <p className="font-body text-[18px] text-ink/50 italic">
+              The ledger is empty. Time to bill someone, or log the first expense.
+            </p>
+            <p className="mt-4 font-meta text-[10px] tracking-[0.22em] text-ink/30">
+              <Link href="/invoices" className="link-rebrief">Compose an invoice</Link>
+              <span className="mx-3 text-gold">·</span>
+              <Link href="/expenses" className="link-rebrief">Record an expense</Link>
+            </p>
+          </div>
+        ) : (
+          <ul>
+            {activity.map((item) => (
+              <li
+                key={item.id + item.type}
+                className="grid grid-cols-[80px_60px_1fr_140px] gap-4 items-baseline py-3 rule-bottom-faint last:border-b-0"
+              >
+                <time className="font-meta text-[10px] tracking-[0.18em] text-ink/45 tabular-nums">
+                  {formatDateBroad(item.date)}
+                </time>
+                <span className="font-meta text-[9px] tracking-[0.2em] text-gold">
+                  {item.type === 'invoice' ? 'BILLED' : 'EXPENSE'}
+                </span>
+                <span className="font-body text-[14px] text-ink leading-snug">
+                  <span className="text-ink/40">{item.reference}</span>
+                  <span className="mx-2 text-gold">·</span>
+                  {item.description}
+                </span>
+                <span
+                  className={`font-display tabular-nums text-[18px] text-right tracking-tight ${
+                    item.amount >= 0 ? 'text-green' : 'text-orange'
+                  }`}
+                >
+                  {item.amount >= 0 ? '+' : '−'}{fmt(item.amount)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+    </>
+  )
+}
+
+function Marginal({
+  label,
+  amount,
+  tone,
+  count,
+}: {
+  label: string
+  amount: number
+  tone: 'in' | 'out' | 'neutral' | 'overdue'
+  count?: string
+}) {
+  const colors = {
+    in: 'text-green',
+    out: 'text-orange',
+    neutral: 'text-ink',
+    overdue: 'text-orange',
+  }
+
+  return (
+    <div>
+      <p className="font-meta text-[9px] tracking-[0.22em] text-ink/45 mb-1.5">
+        {label}
+      </p>
+      <p className={`font-display text-[26px] tabular-nums tracking-tight ${colors[tone]}`}>
+        {fmtSigned(amount)}
+      </p>
+      {count && (
+        <p className="mt-1 font-meta text-[9px] tracking-[0.18em] text-ink/40">
+          {count}
+        </p>
+      )}
     </div>
   )
 }
 
-function StatCard({ label, value, sub, accent }: { label: string; value: string; sub: string; accent: string }) {
-  const colors: Record<string, string> = {
-    gold: 'border-t-rebrief-gold',
-    dark: 'border-t-rebrief-dark/20',
-    red: 'border-t-rebrief-red',
-  }
-
-  return (
-    <div className={`bg-white border border-rebrief-cream border-t-2 ${colors[accent] || colors.dark} rounded-sm p-4`}>
-      <p className="font-meta text-[9px] tracking-[0.2em] uppercase text-rebrief-dark/40 mb-1">{label}</p>
-      <p className="text-xl font-light tabular-nums">{value}</p>
-      <p className="text-[11px] text-rebrief-dark/40 mt-1">{sub}</p>
-    </div>
-  )
+function formatDateBroad(iso: string): string {
+  if (!iso) return '—'
+  const d = new Date(iso + (iso.includes('T') ? '' : 'T00:00:00'))
+  if (isNaN(d.getTime())) return iso
+  return d
+    .toLocaleDateString('en-CA', { day: '2-digit', month: 'short' })
+    .toUpperCase()
+    .replace(/\./g, '')
 }

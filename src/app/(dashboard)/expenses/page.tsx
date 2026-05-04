@@ -1,6 +1,7 @@
 import { supabase } from '@/lib/supabase'
 import type { Expense } from '@/lib/types'
-import { ExpenseTable } from '@/components/ExpenseTable'
+import { SectionHead } from '@/components/SectionHead'
+import { ExpenseWorkbench } from '@/components/ExpenseWorkbench'
 
 export const dynamic = 'force-dynamic'
 
@@ -24,21 +25,26 @@ export default async function ExpensesPage() {
   const categories = new Set(expenses.map((e) => e.category))
 
   return (
-    <div>
-      <div className="flex items-baseline justify-between mb-8">
-        <h1 className="font-display text-2xl tracking-wide uppercase">Expenses</h1>
-        <div className="text-right">
-          <p className="text-sm tabular-nums">
-            <span className="text-rebrief-dark/40">Total: </span>
-            <span className="font-medium">{fmt(totalExpenses)}</span>
-          </p>
-          <p className="text-[10px] text-rebrief-dark/30 mt-0.5">
-            {expenses.length} entries across {categories.size} categories
-          </p>
-        </div>
-      </div>
+    <>
+      <SectionHead
+        eyebrow="MMXXVI · The Treasury"
+        title="Expenses"
+        marginalia={
+          <div className="font-meta text-[10px] tracking-[0.22em] text-ink/50 leading-relaxed space-y-1">
+            <p>
+              <span className="text-gold">{expenses.length}</span> entr{expenses.length !== 1 ? 'ies' : 'y'}
+              <span className="mx-2 text-ink/30">·</span>
+              <span className="text-gold">{categories.size}</span> categor{categories.size !== 1 ? 'ies' : 'y'}
+            </p>
+            <p className="text-ink tracking-[0.2em]">
+              Total Out <span className="text-gold">·</span>{' '}
+              <span className="font-display text-[16px] tabular-nums text-orange">{fmt(totalExpenses)}</span>
+            </p>
+          </div>
+        }
+      />
 
-      <ExpenseTable expenses={expenses} />
-    </div>
+      <ExpenseWorkbench expenses={expenses} />
+    </>
   )
 }
