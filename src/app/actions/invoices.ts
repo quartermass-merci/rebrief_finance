@@ -8,7 +8,10 @@ import type { LineItem, ExtractedInvoice } from '@/lib/types'
 export async function createInvoice(formData: FormData) {
   const lineItemsRaw = formData.get('line_items') as string
   const lineItems: LineItem[] = lineItemsRaw ? JSON.parse(lineItemsRaw) : []
-  const taxRate = parseFloat(formData.get('tax_rate') as string) || 13
+  // Parse tax rate, default to 0 (Rebrief is not HST-registered).
+  // Use isNaN guard rather than `||` because 0 is falsy in JS.
+  const parsedTaxRate = parseFloat(formData.get('tax_rate') as string)
+  const taxRate = isNaN(parsedTaxRate) ? 0 : parsedTaxRate
 
   const subtotal = lineItems.reduce((sum, item) => sum + item.amount, 0)
   const taxAmount = Math.round(subtotal * (taxRate / 100) * 100) / 100
@@ -39,7 +42,10 @@ export async function createInvoice(formData: FormData) {
 export async function updateInvoice(id: string, formData: FormData) {
   const lineItemsRaw = formData.get('line_items') as string
   const lineItems: LineItem[] = lineItemsRaw ? JSON.parse(lineItemsRaw) : []
-  const taxRate = parseFloat(formData.get('tax_rate') as string) || 13
+  // Parse tax rate, default to 0 (Rebrief is not HST-registered).
+  // Use isNaN guard rather than `||` because 0 is falsy in JS.
+  const parsedTaxRate = parseFloat(formData.get('tax_rate') as string)
+  const taxRate = isNaN(parsedTaxRate) ? 0 : parsedTaxRate
 
   const subtotal = lineItems.reduce((sum, item) => sum + item.amount, 0)
   const taxAmount = Math.round(subtotal * (taxRate / 100) * 100) / 100
